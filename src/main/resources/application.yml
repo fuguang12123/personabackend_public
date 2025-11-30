@@ -1,0 +1,55 @@
+server:
+  port: 8080
+  tomcat:
+    connection-timeout: 60000
+spring:
+  application:
+    name: persona_backend
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/personadb?serverTimezone=Asia/Shanghai&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+#    TODO: 请替换为你自己的数据库密码
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+volc:
+  # 你的 AppID TODO: 请替换为你自己的 AppID
+  appId:
+  # 你的 AccessToken TODO: 请替换为你自己的 AccessToken
+  accessToken:
+  asr:
+    cluster: "volcano_asr"
+
+  tts:
+    # 豆包语音合成的默认集群 ID，通常是 volcano_tts
+    # 如果报错 "cluster not exist"，请去火山控制台"服务接口认证信息"里确认
+    clusterId: "volcano_tts"
+
+
+aliyun:
+  oss:
+    # 你的 OSS Endpoint TODO: 请替换为你自己的 OSS Endpoint
+    endpoint:
+    accessKeyId:
+    accessKeySecret:
+    bucketName:
+    region:
+
+moonshot:
+  api:
+    # 你的 Moonshot API Key TODO: 请替换为你自己的 Moonshot API Key
+    key:
+    url:
+zhipu:
+  api:
+    # 你的 ZhiPu API Key TODO: 请替换为你自己的 ZhiPu API Key
+    key:
