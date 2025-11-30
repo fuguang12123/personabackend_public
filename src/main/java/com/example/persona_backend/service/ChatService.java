@@ -6,10 +6,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.persona_backend.dto.ConversationDto;
 import com.example.persona_backend.entity.ChatMessage;
 import com.example.persona_backend.entity.Persona;
-import com.example.persona_backend.entity.UserProfile; // 引入实体
+import com.example.persona_backend.entity.UserProfile;
 import com.example.persona_backend.mapper.ChatMessageMapper;
 import com.example.persona_backend.mapper.PersonaMapper;
-import com.example.persona_backend.mapper.UserProfileMapper; // 引入Mapper
+import com.example.persona_backend.mapper.UserProfileMapper;
 import com.example.persona_backend.utils.AliyunOSSOperator;
 import com.example.persona_backend.utils.VolcEngineUtils;
 import com.example.persona_backend.utils.ZhipuAiUtils;
@@ -18,8 +18,8 @@ import okhttp3.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.util.StringUtils; // 引入工具类
 
 import java.io.IOException;
 import java.util.*;
@@ -122,13 +122,32 @@ public class ChatService {
             // === 分支 A: 生图 ===
             String imagePrompt = command.getString("prompt");
             try {
-                String imageUrl = zhipuAiUtils.generateImage(imagePrompt);
+                // 1. 先获取智谱临时链接
+                String tempUrl = zhipuAiUtils.generateImage(imagePrompt);
+                String finalUrl = tempUrl;
+
+                // 2. ✅ [Fix] 尝试转存 OSS (这是之前漏掉的逻辑)
+                try {
+                    Request request = new Request.Builder().url(tempUrl).build();
+                    try (Response response = client.newCall(request).execute()) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            byte[] imageBytes = response.body().bytes();
+                            String ossUrl = aliyunOSSOperator.upload(imageBytes, "chat_gen_" + System.currentTimeMillis() + ".png");
+                            finalUrl = ossUrl;
+                            log.info("☁️ [Chat] 图片已成功转存 OSS: {}", ossUrl);
+                        }
+                    }
+                } catch (Exception ossEx) {
+                    log.error("❌ [Chat] 图片转存 OSS 失败，将使用临时链接降级", ossEx);
+                    // 这里的 catch 保证了即使上传失败，finalUrl 依然是 tempUrl，实现了降级策略
+                }
+
                 aiMsg.setMsgType(1); // Image
                 aiMsg.setContent(imagePrompt);
-                aiMsg.setMediaUrl(imageUrl);
+                aiMsg.setMediaUrl(finalUrl); // 使用转存后的 URL 或 临时 URL
                 aiMsg.setDuration(0);
             } catch (Exception e) {
-                log.error("生图失败", e);
+                log.error("生图完全失败", e);
                 aiMsg.setMsgType(0);
                 aiMsg.setContent("（图片生成失败: " + e.getMessage() + "）");
             }
